@@ -2,7 +2,7 @@ name: Sync merged leaderboard results
 on:
   push:
     branches: [main]
-    paths: ['submissions/**']
+    paths: ['submissions/**', 'results.json']
   workflow_dispatch:
 permissions: {}
 concurrency:

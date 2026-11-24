@@ -375,6 +375,154 @@
           }
         }
       }
+    },
+    {
+      "category": "C1",
+      "date": "2026-11-24",
+      "id": "kraken-7-2-ppocrv6-medium",
+      "licence": "Apache-2.0",
+      "reader": "Kraken PP-OCRv6 medium",
+      "scorer_version": "heocr-bench 0.1.0@39ed8dddd37d9088edb72308c6f4497d6c627e2a",
+      "submission_sha256": null,
+      "type": "open weights",
+      "verified": true,
+      "version": "Kraken 7.2 · PP-OCRv6 medium 15313b51",
+      "views": {
+        "all": {
+          "archive": {
+            "chars": 5352,
+            "edits": 4022
+          },
+          "issuer-render": {
+            "chars": 13964,
+            "edits": 11341
+          },
+          "issuer-scan": {
+            "chars": 0,
+            "edits": 0
+          },
+          "phone-a": {
+            "chars": 24804,
+            "edits": 19602
+          },
+          "phone-b": {
+            "chars": 24804,
+            "edits": 19350
+          },
+          "pooled": {
+            "chars": 93728,
+            "edits": 73707
+          },
+          "scanner": {
+            "chars": 24804,
+            "edits": 19392
+          }
+        },
+        "filtered": {
+          "archive": {
+            "chars": 4697,
+            "edits": 3540
+          },
+          "issuer-render": {
+            "chars": 11455,
+            "edits": 9375
+          },
+          "issuer-scan": {
+            "chars": 0,
+            "edits": 0
+          },
+          "phone-a": {
+            "chars": 18131,
+            "edits": 14399
+          },
+          "phone-b": {
+            "chars": 18131,
+            "edits": 14218
+          },
+          "pooled": {
+            "chars": 70545,
+            "edits": 55773
+          },
+          "scanner": {
+            "chars": 18131,
+            "edits": 14241
+          }
+        }
+      }
+    },
+    {
+      "category": "C1",
+      "date": "2026-11-24",
+      "id": "tesseract-legacy-heb",
+      "licence": "Apache-2.0",
+      "reader": "Tesseract legacy Hebrew",
+      "scorer_version": "heocr-bench 0.1.0@39ed8dddd37d9088edb72308c6f4497d6c627e2a",
+      "submission_sha256": null,
+      "type": "open weights",
+      "verified": true,
+      "version": "Tesseract 5.5.3 · OEM 0 · tessdata 4.1.0",
+      "views": {
+        "all": {
+          "archive": {
+            "chars": 5352,
+            "edits": 2279
+          },
+          "issuer-render": {
+            "chars": 13964,
+            "edits": 2565
+          },
+          "issuer-scan": {
+            "chars": 0,
+            "edits": 0
+          },
+          "phone-a": {
+            "chars": 24804,
+            "edits": 7302
+          },
+          "phone-b": {
+            "chars": 24804,
+            "edits": 7339
+          },
+          "pooled": {
+            "chars": 93728,
+            "edits": 26762
+          },
+          "scanner": {
+            "chars": 24804,
+            "edits": 7277
+          }
+        },
+        "filtered": {
+          "archive": {
+            "chars": 4697,
+            "edits": 1869
+          },
+          "issuer-render": {
+            "chars": 11455,
+            "edits": 1875
+          },
+          "issuer-scan": {
+            "chars": 0,
+            "edits": 0
+          },
+          "phone-a": {
+            "chars": 18131,
+            "edits": 4403
+          },
+          "phone-b": {
+            "chars": 18131,
+            "edits": 4497
+          },
+          "pooled": {
+            "chars": 70545,
+            "edits": 17177
+          },
+          "scanner": {
+            "chars": 18131,
+            "edits": 4533
+          }
+        }
+      }
     }
   ],
   "schema": "heocr.leaderboard.results.v1"
