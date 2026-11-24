@@ -30,6 +30,36 @@
         <div class="table-wrap" tabindex="0" role="region" aria-label="Page character error rate results">
           <table id="results" hidden><thead></thead><tbody></tbody></table>
         </div>
+        <section id="document-types" aria-labelledby="document-types-title" hidden>
+          <h2 id="document-types-title">CER by document type and capture</h2>
+          <p>Gazette groups pages by source and overlaps the layout groups. Each score shows its carrier count. Artwork-masked results have a separate cohort.</p>
+          <div class="toolbar">
+            <label>Document type
+              <select id="document-type">
+                <option value="all">All document types</option>
+                <option value="gazette">Gazette / legal notice</option>
+                <option value="forms">Forms</option>
+                <option value="tables">Tables</option>
+                <option value="prose">Prose</option>
+                <option value="contents">Contents / index</option>
+              </select>
+            </label>
+            <label>Carrier scope
+              <select id="document-scope">
+                <option value="matched">56 pixel-matched carriers</option>
+                <option value="original">65 original carriers</option>
+                <option value="masked">9 artwork-masked diagnostics</option>
+              </select>
+            </label>
+          </div>
+          <div class="table-wrap" tabindex="0" role="region" aria-labelledby="document-types-title">
+            <table>
+              <thead><tr id="document-score-header"><th scope="col">Reader</th></tr></thead>
+              <tbody id="document-score-rows"></tbody>
+            </table>
+          </div>
+          <p id="document-type-empty" hidden>No saved scores in this group.</p>
+        </section>
         <div id="diagnostics"></div>
       </div>
     </section>

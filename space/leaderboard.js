@@ -59,8 +59,49 @@ function render() {
   }
   table.tBodies[0].replaceChildren(body);
   table.hidden = false;
+  renderDocumentTypes();
   renderDiagnostics();
 }
+
+const documentType = document.querySelector("#document-type");
+const documentScope = document.querySelector("#document-scope");
+const documentCaptures = {
+  all: "All captures", archive: strata.archive, "issuer-render": strata["issuer-render"],
+  "issuer-scan": strata["issuer-scan"], scanner: strata.scanner, phone: "Phones combined",
+  "phone-a": strata["phone-a"], "phone-b": strata["phone-b"],
+};
+for (const title of Object.values(documentCaptures)) {
+  const th = cell("th", title);
+  th.scope = "col";
+  document.querySelector("#document-score-header").append(th);
+}
+
+function renderDocumentTypes() {
+  if (!data.document_types) return;
+  const rows = document.createDocumentFragment();
+  for (const reader of data.document_types.readers) {
+    const cells = reader.scopes[documentScope.value]?.[view.value]?.[documentType.value];
+    if (!cells) continue;
+    const tr = document.createElement("tr");
+    const label = reader.reference_builder ? `${reader.reader} · reference builder` : reader.reader;
+    const heading = cell("th", label);
+    heading.scope = "row";
+    tr.append(heading);
+    for (const cap of Object.keys(documentCaptures)) {
+      const metric = cells[cap];
+      const value = metric ? `${(100 * metric.edits / metric.chars).toFixed(2)}% · ${metric.carriers}` : "—";
+      tr.append(cell("td", value, "metric"));
+    }
+    rows.append(tr);
+  }
+  const hasRows = rows.childNodes.length > 0;
+  document.querySelector("#document-score-rows").replaceChildren(rows);
+  document.querySelector("#document-type-empty").hidden = hasRows;
+  document.querySelector("#document-types").hidden = false;
+}
+
+documentType.addEventListener("change", renderDocumentTypes);
+documentScope.addEventListener("change", renderDocumentTypes);
 
 function renderDiagnostics() {
   const output = document.querySelector("#diagnostics");
