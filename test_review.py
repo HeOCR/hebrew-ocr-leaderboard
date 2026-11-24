@@ -87,7 +87,9 @@ class DiagnosticTest(unittest.TestCase):
         row = next(row for row in data["rows"] if row["id"] == "claude-haiku-4-5-v0")
         self.assertEqual(
             row["diagnostic"]["notice"],
-            ARTWORK_MASK_NOTICE + " Haiku 4.5 hit the output cap on 11 carriers.",
+            ARTWORK_MASK_NOTICE
+            + " 64/65 Haiku 4.5 replies were Hebrew-dominant (median 100% Hebrew letters), 1 Latin-dominant."
+            " 11 hit the output cap.",
         )
         for view in ("all", "filtered"):
             self.assertNotIn(row, ranked(data, view))
