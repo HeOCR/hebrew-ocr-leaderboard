@@ -1,0 +1,86 @@
+name: Sync merged leaderboard results
+on:
+  push:
+    branches: [main]
+    paths: ['submissions/**']
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: leaderboard-results-main
+  cancel-in-progress: false
+env:
+  HEOCR_SCORER_COMMIT: 39ed8dddd37d9088edb72308c6f4497d6c627e2a
+  HF_HUB_DISABLE_IMPLICIT_TOKEN: '1'
+jobs:
+  reconcile:
+    if: github.ref == 'refs/heads/main' && vars.HEOCR_ENABLE_LEADERBOARD == '1'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    outputs:
+      revision: ${{ steps.results.outputs.revision }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r requirements.txt
+      - id: results
+        name: Reconcile accepted packets and update canonical results
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3; do
+            git fetch --quiet origin main
+            git reset --hard origin/main
+            python review.py reconcile results.json
+            if ! git diff --quiet -- results.json; then
+              git add results.json
+              git commit -m 'chore: refresh leaderboard results'
+              if ! git push origin HEAD:main; then
+                continue
+              fi
+            fi
+            echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            exit 0
+          done
+          exit 1
+  render:
+    needs: reconcile
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.reconcile.outputs.revision }}
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Build both site pages from the same results snapshot
+        env:
+          SITE_BUILDER_COMMIT: ${{ vars.HEOCR_SITE_BUILDER_COMMIT }}
+        run: bash build-site.sh
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: leaderboard-site
+          path: out/
+          if-no-files-found: error
+      - if: vars.HEOCR_ENABLE_LEADERBOARD_SYNC == '1'
+        name: Propose a generated site update
+        env:
+          GH_TOKEN: ${{ secrets.HEOCR_LEADERBOARD_SITE_TOKEN }}
+        run: bash sync-site.sh
+      - if: vars.HEOCR_ENABLE_LEADERBOARD_SYNC == '1'
+        name: Sync the HF static Space and results dataset
+        env:
+          HF_TOKEN: ${{ secrets.HEOCR_LEADERBOARD_HF_TOKEN }}
+          HF_HUB_DISABLE_TELEMETRY: '1'
+        run: |
+          python -m pip install huggingface-hub==2.4.0
+          python sync_hf.py

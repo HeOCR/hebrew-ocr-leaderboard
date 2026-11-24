@@ -1,0 +1,3 @@
+heocr-bench @ git+https://github.com/HeOCR/heocr-bench@39ed8dddd37d9088edb72308c6f4497d6c627e2a
+huggingface-hub==2.4.0
+rapidfuzz==3.13.0
