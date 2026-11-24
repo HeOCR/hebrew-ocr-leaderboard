@@ -1,0 +1,46 @@
+:root {
+  font-family: system-ui, sans-serif;
+  color: #162941;
+  background: #f5f8fc;
+  line-height: 1.5;
+  --line: #d8e2ed;
+  --blue: #174a8c;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+header {
+  background: white;
+  border-bottom: 1px solid var(--line);
+  padding: .85rem max(1rem, calc((100vw - 86rem) / 2));
+}
+header a { font-size: 1.2rem; font-weight: 750; text-decoration: none; }
+a { color: var(--blue); }
+main { max-width: 88rem; margin: auto; padding: clamp(1rem, 3vw, 3rem) 1rem 3rem; }
+h1 { font-size: clamp(1.9rem, 4vw, 3.25rem); line-height: 1.12; margin: 0 0 .55rem; letter-spacing: -.035em; }
+h2 { margin: 0 0 .55rem; font-size: 1.35rem; }
+p { margin: 0 0 .85rem; }
+.intro { font-size: 1.1rem; }
+.notice { padding: .75rem 1rem; max-width: 76ch; border-inline-start: .25rem solid #356ab0; background: #eaf2fd; }
+nav { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.35rem 0 1rem; }
+button, select {
+  font: inherit; color: inherit; background: white; padding: .45rem .7rem;
+  border: 1px solid #b4c6d8; border-radius: .35rem;
+}
+button { cursor: pointer; }
+button[aria-pressed="true"] { color: white; background: var(--blue); border-color: var(--blue); }
+:focus-visible { outline: 3px solid #3374c5; outline-offset: 2px; }
+section { background: white; border: 1px solid var(--line); border-radius: .6rem; padding: 1rem; }
+.toolbar { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: .45rem 1rem; margin-bottom: .6rem; }
+.toolbar p { margin: 0; }
+label { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem; }
+.table-wrap { overflow: auto; max-width: 100%; }
+table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+th, td { padding: .55rem; text-align: start; border-bottom: 1px solid var(--line); vertical-align: top; }
+thead { background: #edf3fa; }
+td.metric { text-align: end; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.scorer { min-width: 11rem; overflow-wrap: anywhere; }
+tr:last-child td, tr:last-child th { border-bottom: none; }
+.submit { margin-top: 1rem; }
+.submit p { max-width: 78ch; }
+
+.diagnostic { margin-top: 1rem; }

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hebrew OCR leaderboard · HeOCR</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="leaderboard.js" defer></script>
+</head>
+<body>
+  <header><a href="https://heocr.org/">HeOCR</a></header>
+  <main>
+    <h1>Hebrew OCR leaderboard</h1>
+    <p class="intro">Compare readers on page character error rate. Lower is better.</p>
+    <p class="notice">The v0 references are public. Training on those texts can inflate scores. A hidden v1 split is planned.</p>
+    <nav aria-label="Benchmark categories" id="categories"></nav>
+    <section id="category" aria-labelledby="category-title">
+      <h2 id="category-title"></h2>
+      <p id="coming" hidden>Coming.</p>
+      <div id="scores">
+        <div class="toolbar">
+          <p id="scope" role="status">Loading results…</p>
+          <label for="view">Score view
+            <select id="view" disabled>
+              <option value="filtered">Common filtered positions</option>
+              <option value="all">All reference positions</option>
+            </select>
+          </label>
+        </div>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Page character error rate results">
+          <table id="results" hidden><thead></thead><tbody></tbody></table>
+        </div>
+        <div id="diagnostics"></div>
+      </div>
+    </section>
+    <section class="submit" aria-labelledby="submit-title">
+      <h2 id="submit-title">Submit via GitHub</h2>
+      <p>Open a pull request with a heocr-bench predictions ZIP or a commit-pinned link to the ZIP on Hugging Face. GitHub Actions scores it. Merged results are marked unverified until HeOCR reruns the reader.</p>
+      <a href="https://github.com/HeOCR/hebrew-ocr-leaderboard/blob/main/SUBMITTING.md">Submission instructions ↗</a>
+    </section>
+  </main>
+</body>
+</html>

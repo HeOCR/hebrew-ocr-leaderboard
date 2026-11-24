@@ -4,7 +4,7 @@ from hashlib import sha256
 from pathlib import Path
 import sys
 
-from huggingface_hub import HfApi, hf_hub_download
+from huggingface_hub import CommitOperationAdd, HfApi, hf_hub_download
 
 from leaderboard_results import RESULTS_REPO, read_results
 
@@ -16,10 +16,20 @@ def sync(api, repo, kind, pin):
     info = api.repo_info(repo_id=repo, repo_type=kind)
     if info.private or info.gated:
         raise ValueError("The destination needs separate public-release approval")
-    commit = api.upload_file(path_or_fileobj=PATH, path_in_repo="results.json", repo_id=repo, repo_type=kind)
-    readback = hf_hub_download(repo, "results.json", repo_type=kind, revision=commit.oid, token=False)
-    if sha256(Path(readback).read_bytes()).hexdigest() != pin:
-        raise ValueError("Hugging Face results readback differs")
+    files = {"results.json": PATH}
+    if kind == "space":
+        if info.sdk != "static":
+            raise ValueError("The approved leaderboard Space uses the static SDK")
+        files.update({name: Path("space") / name for name in ("index.html", "leaderboard.js", "style.css")})
+    commit = api.create_commit(
+        repo, repo_type=kind, parent_commit=info.sha, commit_message="Sync leaderboard results",
+        operations=[CommitOperationAdd(path_in_repo=name, path_or_fileobj=str(path))
+                    for name, path in files.items()],
+    )
+    for name, path in files.items():
+        downloaded = hf_hub_download(repo, name, repo_type=kind, revision=commit.oid, token=False)
+        if Path(downloaded).read_bytes() != path.read_bytes():
+            raise ValueError("Hugging Face leaderboard readback differs")
     print(f"{kind} {commit.oid} {pin}")
 
 
