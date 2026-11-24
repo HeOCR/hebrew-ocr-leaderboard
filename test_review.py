@@ -18,13 +18,22 @@ from leaderboard_results import ARTWORK_MASK_NOTICE, BIAS_NOTICE, ranked, read_r
 from submissions import score_zip, scorer_identity
 
 
-def fixture_zip(extra=None):
+SCORER = "39ed8dddd37d9088edb72308c6f4497d6c627e2a"
+READER = {"reader": "Fixture OCR", "version": "1", "license": "CC0-1.0", "weights": "open"}
+CARRIERS = {"toy": Carrier("toy", "p1", "scanner", ["abc", "xyz"], [True, False])}
+
+
+def fixture_receipt(raw, **fields):
+    return {**READER, "link": "https://example.org/fixture", "sha256": sha256(raw).hexdigest(), **fields}
+
+
+def fixture_zip(extra=None, result="abd\nxzz\n", **metadata):
     buffer = BytesIO()
     with ZipFile(buffer, "w") as archive:
         archive.writestr("metadata.json", json.dumps({
-            "reader": "Fixture", "version": "1", "license": "CC0-1.0", "weights": "open", "params": {},
+            **READER, "params": {}, **metadata,
         }))
-        archive.writestr("toy.txt", "abd\nxzz\n")
+        archive.writestr("toy.txt", result)
         if extra:
             archive.writestr(extra, "fixture")
     return buffer.getvalue()
@@ -32,16 +41,27 @@ def fixture_zip(extra=None):
 
 class ScoreTest(unittest.TestCase):
     def test_pinned_scorer_and_unverified_aggregate(self):
-        version = scorer_identity("39ed8dddd37d9088edb72308c6f4497d6c627e2a")
-        roster = {"toy": Carrier("toy", "p1", "scanner", ["abc", "xyz"], [True, False])}
+        version = scorer_identity(SCORER)
         raw = fixture_zip()
-        row = score_zip(raw, "open weights", roster, load_submission, score_submission, version)
+        receipt = review.packet(json.dumps(fixture_receipt(raw)).encode())
+        row = score_zip(raw, receipt, CARRIERS, load_submission, score_submission, version)
         self.assertEqual(row["views"]["all"]["pooled"], {"edits": 2, "chars": 7})
         self.assertEqual(row["views"]["filtered"]["pooled"], {"edits": 1, "chars": 3})
         self.assertEqual(row["id"], sha256(raw).hexdigest())
         self.assertIs(row["verified"], False)
         with self.assertRaises(ValueError):
-            score_zip(fixture_zip("../extra.txt"), "open weights", roster, load_submission, score_submission, version)
+            score_zip(fixture_zip("../extra.txt"), receipt, CARRIERS, load_submission, score_submission, version)
+
+    def test_receipt_requires_link_and_matching_zip_metadata(self):
+        raw = fixture_zip()
+        missing = fixture_receipt(raw)
+        del missing["link"]
+        with self.assertRaisesRegex(ValueError, "receipt fields"):
+            review.packet(json.dumps(missing).encode())
+        receipt = review.packet(json.dumps(fixture_receipt(raw, weights="closed")).encode())
+        self.assertEqual(receipt["reader_type"], "closed weights")
+        with self.assertRaisesRegex(ValueError, "must agree"):
+            score_zip(raw, receipt, CARRIERS, load_submission, score_submission, scorer_identity(SCORER))
 
     def test_hf_links_and_digest(self):
         pin = "9" * 40
@@ -52,10 +72,10 @@ class ScoreTest(unittest.TestCase):
                 review.fetch_hf(unsafe)
         with self.assertRaises(ValueError):
             review.HFRedirects().redirect_request(None, None, 302, "", {}, "http://huggingface.co/file")
-        expected = {"hf_url": url, "sha256": sha256(b"data").hexdigest(), "reader_type": "API"}
+        expected = fixture_receipt(b"data", hf_url=url, reader_type="API")
         with patch("review.fetch_hf", return_value=b"data"), patch("review.score_registered_upload") as scorer:
             review.score_packet(pin, expected, None)
-            scorer.assert_called_once_with(b"data", "API")
+            scorer.assert_called_once_with(b"data", expected)
         with patch("review.fetch_hf", return_value=b"other"), self.assertRaisesRegex(ValueError, "SHA-256"):
             review.score_packet(pin, expected, None)
 
@@ -125,22 +145,70 @@ class GitPacketTest(unittest.TestCase):
         review.git("switch", "-qc", "submit")
         self.raw = fixture_zip()
         self.digest = sha256(self.raw).hexdigest()
-        Path("submissions/test.json").write_text(json.dumps({"sha256": self.digest, "reader_type": "open weights"}))
-        Path("submissions/test.zip").write_bytes(self.raw)
-        review.git("add", ".")
-        review.git("commit", "-qm", "add a fixture")
+        self.add_packet("test", self.raw, fixture_receipt(self.raw))
         self.head = review.git("rev-parse", "HEAD").decode().strip()
         review.git("update-ref", "refs/pull/1/head", self.head)
 
-    def test_only_reads_new_packet_from_pinned_head(self):
+    def add_packet(self, name, raw, receipt):
+        Path(f"submissions/{name}.json").write_text(json.dumps(receipt))
+        Path(f"submissions/{name}.zip").write_bytes(raw)
+        review.git("add", "submissions")
+        review.git("commit", "-qm", f"add fixture {name}")
+
+    def test_invented_reader_pr_comment_merge_and_reconcile(self):
         review.git("switch", "-q", "main")
-        with patch("review.score_registered_upload", return_value={"id": self.digest}) as scorer:
-            result = review.score_pr(1, self.head)
-            scorer.assert_called_once_with(self.raw, "open weights")
-        self.assertEqual(result, {"pull_request": 1, "head_sha": self.head, "row": {"id": self.digest}})
-        self.assertFalse(Path("submissions/test.json").exists())
-        with self.assertRaisesRegex(ValueError, "moved"):
-            review.score_pr(1, self.base)
+        path = Path("results.json")
+        before = path.read_bytes()
+        with patch.dict(os.environ, {"HEOCR_SCORER_COMMIT": SCORER}), patch(
+            "submissions.benchmark_carriers", return_value=CARRIERS
+        ):
+            with patch("sys.argv", ["review.py", "pr", "1", self.head, "out/score.json", "--comment", "out/comment.md"]):
+                self.assertEqual(review.main(), 0)
+            result = json.loads(Path("out/score.json").read_bytes())
+            self.assertEqual(result["head_sha"], self.head)
+            comment = Path("out/comment.md").read_text()
+            self.assertIn(self.head, comment)
+            self.assertIn("Self-submitted, unverified", comment)
+            self.assertIn("| Office scanner | 33.33% | 28.57% |", comment)
+            self.assertNotIn(READER["reader"], comment)
+            self.assertFalse(Path("submissions/test.json").exists())
+            self.assertEqual(path.read_bytes(), before)
+            with self.assertRaisesRegex(ValueError, "moved"):
+                review.score_pr(1, self.base)
+
+            review.git("merge", "--squash", "submit")
+            review.git("commit", "-qm", "reviewed fixture merge")
+            with patch("sys.argv", ["review.py", "reconcile", "results.json"]):
+                self.assertEqual(review.main(), 0)
+                first = path.read_bytes()
+                self.assertEqual(review.main(), 0)
+            self.assertEqual(path.read_bytes(), first)
+            after = read_results(path)
+            self.assertEqual(after["rows"][:-1], json.loads(before)["rows"])
+            self.assertEqual(after["rows"][-1], result["row"])
+            self.assertIs(after["rows"][-1]["verified"], False)
+
+    def test_reject_reader_version_duplicates_before_and_after_reconcile(self):
+        review.git("switch", "-q", "main")
+        review.git("merge", "--ff-only", "submit")
+        review.git("switch", "-qc", "duplicate")
+        raw = fixture_zip(result="abc\nxyz\n", reader="fixture   ocr", version="１")
+        self.add_packet("duplicate", raw, fixture_receipt(raw, reader="fixture   ocr", version="１"))
+        head = review.git("rev-parse", "HEAD").decode().strip()
+        review.git("update-ref", "refs/pull/2/head", head)
+        review.git("switch", "-q", "main")
+        with patch.dict(os.environ, {"HEOCR_SCORER_COMMIT": SCORER}), patch(
+            "submissions.benchmark_carriers", return_value=CARRIERS
+        ):
+            with self.assertRaisesRegex(review.DuplicateSubmission, "reader and version"):
+                review.score_pr(2, head)
+            path = Path("results.json")
+            accepted = review.reconcile(path)
+            review.write_json(path, accepted)
+            with self.assertRaises(review.DuplicateSubmission):
+                review.score_pr(2, head)
+            review.git("merge", "--ff-only", "duplicate")
+            self.assertEqual(review.reconcile(path), accepted)
 
     def test_unrelated_files_and_nonregular_zip_are_rejected(self):
         Path("workflow.sh").write_text("fixture")
@@ -161,18 +229,6 @@ class GitPacketTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "ordinary"):
             review.read_blob(head, path.as_posix(), 2_000_000)
 
-    def test_reconcile_scores_once_and_keeps_seed(self):
-        path = Path("results.json")
-        current = review.read_results(path)
-        metrics = current["rows"][0]["views"]
-        row = dict(current["rows"][0], id=self.digest, type="open weights", views=metrics,
-                   submission_sha256=self.digest, verified=False)
-        with patch("review.score_registered_upload", return_value=row) as scorer:
-            merged = review.reconcile(path)
-            review.write_json(path, merged)
-            self.assertEqual(review.reconcile(path), merged)
-            scorer.assert_called_once_with(self.raw, "open weights")
-        self.assertEqual(merged["rows"], [*current["rows"], row])
 
 
 if __name__ == "__main__":

@@ -54,7 +54,7 @@ function render() {
       const metric = row.views[view.value][key];
       tr.append(cell("td", metric.chars ? `${(100 * metric.edits / metric.chars).toFixed(2)}%` : "—", "metric"));
     }
-    tr.append(cell("td", row.date), cell("td", row.scorer_version, "scorer"), cell("td", row.verified ? "Yes" : "No"));
+    tr.append(cell("td", row.date), cell("td", row.scorer_version, "scorer"), cell("td", row.verified ? "Verified" : "Self-submitted, unverified"));
     body.append(tr);
   }
   table.tBodies[0].replaceChildren(body);
@@ -109,7 +109,7 @@ for (const [id, title] of Object.entries(categories)) {
   buttons.push(button);
 }
 showCategory("C1");
-const columns = ["Reader", "Version", "Type", "Licence", ...Object.values(strata), "Date", "Scorer version", "Verified"];
+const columns = ["Reader", "Version", "Type", "Licence", ...Object.values(strata), "Date", "Scorer version", "Status"];
 const header = table.tHead.insertRow();
 for (const field of columns) {
   const th = cell("th", field);

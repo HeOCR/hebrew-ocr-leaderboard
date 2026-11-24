@@ -14,6 +14,7 @@ header {
   padding: .85rem max(1rem, calc((100vw - 86rem) / 2));
 }
 header a { font-size: 1.2rem; font-weight: 750; text-decoration: none; }
+header .submit-link { font-size: .95rem; margin-inline-start: 1.2rem; text-decoration: underline; }
 a { color: var(--blue); }
 main { max-width: 88rem; margin: auto; padding: clamp(1rem, 3vw, 3rem) 1rem 3rem; }
 h1 { font-size: clamp(1.9rem, 4vw, 3.25rem); line-height: 1.12; margin: 0 0 .55rem; letter-spacing: -.035em; }
@@ -41,6 +42,8 @@ td.metric { text-align: end; font-variant-numeric: tabular-nums; white-space: no
 td.scorer { min-width: 11rem; overflow-wrap: anywhere; }
 tr:last-child td, tr:last-child th { border-bottom: none; }
 .submit { margin-top: 1rem; }
-.submit p { max-width: 78ch; }
+.submit ol { max-width: 78ch; padding-inline-start: 1.5rem; }
+.submit li + li { margin-top: .35rem; }
+.submit-he { border-top: 1px solid var(--line); margin-top: 1rem; padding-top: 1rem; }
 
 .diagnostic { margin-top: 1rem; }
