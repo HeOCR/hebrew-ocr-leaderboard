@@ -125,6 +125,39 @@ class DiagnosticTest(unittest.TestCase):
             validate(data)
 
 
+class EfficiencyTest(unittest.TestCase):
+    def test_pinned_external_panel_preserves_missing_fields(self):
+        data = read_results(Path(__file__).with_name("results.json"))
+        pairs = {(row["reader_id"], row["platform"]): row for row in data["efficiency"]["rows"]}
+        self.assertEqual(len(pairs), 12)
+        self.assertEqual(pairs[("tessdata-fast", "m4-cpu")]["pages_per_minute"], 121.2024)
+        self.assertEqual(pairs[("tessdata-fast", "github-ubuntu-cpu")]["pages_per_minute"], 100.5861)
+        for platform, repeats in (("m4-cpu", 1), ("github-ubuntu-cpu", 3)):
+            with self.subTest(platform=platform):
+                local = [row for row in pairs.values() if row["platform"] == platform
+                         and row["status"] != "list-price-only"]
+                self.assertEqual(len(local), 5)
+                self.assertTrue(all(row["pages"] == 65 and row["repetitions"] == repeats for row in local))
+                paddle = pairs[("paddle", platform)]
+                self.assertEqual((paddle["execution"], paddle["status"]), ("onnx-cpu", "measured-cpu-variant"))
+                gemini = pairs[("gemini-vertex-v0", platform)]
+                self.assertEqual((gemini["api_input_usd_per_million"], gemini["api_output_usd_per_million"]), (0.75, 3.75))
+                self.assertIsNone(gemini["pages_per_minute"])
+                self.assertIsNone(gemini["runner_usd_per_1000"])
+
+    def test_duplicate_join_and_price_only_measurement_are_rejected(self):
+        data = read_results(Path(__file__).with_name("results.json"))
+        measurements = data["efficiency"]["rows"]
+        measurements.append(measurements[0].copy())
+        with self.assertRaisesRegex(ValueError, "repeated efficiency join"):
+            validate(data)
+        measurements.pop()
+        quote = next(row for row in measurements if row["status"] == "list-price-only")
+        quote["peak_rss_mib"] = 0
+        with self.assertRaisesRegex(ValueError, "cannot contain measurements"):
+            validate(data)
+
+
 class GitPacketTest(unittest.TestCase):
     def setUp(self):
         root = Path(temp := self.enterContext(TemporaryDirectory()))
@@ -185,6 +218,7 @@ class GitPacketTest(unittest.TestCase):
             self.assertEqual(path.read_bytes(), first)
             after = read_results(path)
             self.assertEqual(after["rows"][:-1], json.loads(before)["rows"])
+            self.assertEqual(after["efficiency"], json.loads(before)["efficiency"])
             self.assertEqual(after["rows"][-1], result["row"])
             self.assertIs(after["rows"][-1]["verified"], False)
 
