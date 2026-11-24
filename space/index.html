@@ -65,26 +65,42 @@
     </section>
     <section id="efficiency" aria-labelledby="efficiency-title" hidden>
       <h2 id="efficiency-title">Reader efficiency</h2>
-      <p>Each local run covers all 65 public v0 carrier images. Paddle efficiency uses ONNX CPU. Its accuracy run used CUDA. Ubuntu runner costs are projections at $0.36/hour. Gemini lists public Vertex token rates. A dash marks an unavailable value.</p>
+      <p>Each local run covers all 65 public v0 carrier images. Paddle efficiency uses ONNX CPU. Its accuracy run used CUDA. Ubuntu runner costs are projections at $0.36/hour. A dash marks an unavailable value.</p>
       <div class="toolbar">
         <label for="efficiency-platform">Platform
           <select id="efficiency-platform">
             <option value="m4-cpu">Apple M4 CPU</option>
             <option value="github-ubuntu-cpu">GitHub Ubuntu CPU</option>
+            <option value="registered-api">Registered API runs</option>
           </select>
         </label>
         <a id="efficiency-source">Pinned measurements and method</a>
       </div>
-      <div class="table-wrap" tabindex="0" role="region" aria-label="Reader efficiency by platform">
+      <div class="table-wrap" id="efficiency-cpu" tabindex="0" role="region" aria-label="Local reader efficiency">
         <table>
           <thead><tr>
             <th scope="col">Reader</th><th scope="col">Execution</th><th scope="col">Images / runs</th>
             <th scope="col">Pages/min</th><th scope="col">Peak RSS (MiB)</th>
             <th scope="col">Marginal API USD / 1,000 pages</th><th scope="col">Runner hours / 1,000 pages</th>
-            <th scope="col">Runner USD / 1,000 pages</th><th scope="col">Input / output USD per 1M tokens</th>
+            <th scope="col">Runner USD / 1,000 pages</th>
           </tr></thead>
           <tbody id="efficiency-rows"></tbody>
         </table>
+      </div>
+      <div id="efficiency-api" hidden>
+        <p class="notice" id="efficiency-api-note"></p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Registered API reader efficiency">
+          <table>
+            <thead><tr>
+              <th scope="col">Reader</th><th scope="col">Execution</th><th scope="col">Run</th>
+              <th scope="col">Images / runs</th><th scope="col">List USD / 1,000 pages</th>
+              <th scope="col">Input / output USD per 1M tokens</th><th scope="col">USD / 1,000 API units</th>
+              <th scope="col">API pages/min</th><th scope="col">Mean request latency (s)</th>
+              <th scope="col">Timed pages</th><th scope="col">Timing scope</th><th scope="col">Client peak RSS (MiB)</th>
+            </tr></thead>
+            <tbody id="efficiency-api-rows"></tbody>
+          </table>
+        </div>
       </div>
     </section>
     <section class="submit" aria-labelledby="submit-title">
