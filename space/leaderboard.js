@@ -106,35 +106,63 @@ const executionLabels = {
   "vertex-global-https": { "list-price-only": "Vertex global · list prices only" },
 };
 
+const apiExecutions = {
+  "vertex-global-https": "Vertex global",
+  "vision-document-text-detection": "Vision Document Text Detection",
+  "document-ai-enterprise-ocr": "Document AI Enterprise OCR",
+  "anthropic-message-batch": "Anthropic Message Batches",
+};
+const apiStatuses = {
+  "list-price-only": "list prices only",
+  "registered-cost-only": "list cost from usage",
+  "registered-timing-only": "recorded timing",
+  registered: "list cost and timing",
+};
+const measure = (value, decimals) => value == null ? "—" : value.toFixed(decimals);
+
+function efficiencyCells(entry, registered) {
+  const counts = entry.pages == null ? "—" : `${entry.pages} / ${entry.repetitions}`;
+  if (registered) {
+    const input = entry.api_input_usd_per_million;
+    const output = entry.api_output_usd_per_million;
+    const rates = input == null && output == null ? "—" : `${measure(input, 2)} / ${measure(output, 2)}`;
+    return [
+      `${apiExecutions[entry.execution]} · ${apiStatuses[entry.status]}`,
+      entry.api_registration, counts, measure(entry.marginal_usd_per_1000, 6), rates,
+      measure(entry.api_usd_per_1000_units, 2), measure(entry.api_pages_per_minute, 2),
+      measure(entry.api_mean_request_latency_seconds, 3), measure(entry.api_timed_pages, 0),
+      entry.api_timing_scope ?? "—", measure(entry.peak_rss_mib, 2),
+    ];
+  }
+  return [
+    executionLabels[entry.execution]?.[entry.status], counts, measure(entry.pages_per_minute, 2),
+    measure(entry.peak_rss_mib, 2), measure(entry.marginal_usd_per_1000, 2),
+    measure(entry.runner_hours_per_1000, 3), measure(entry.runner_usd_per_1000, 5),
+  ];
+}
+
 function renderEfficiency() {
   const panel = data?.efficiency;
   if (!panel?.rows.length) return;
   const readers = new Map(data.rows.map(row => [row.id, row.reader]));
   const rows = document.createDocumentFragment();
-  const measure = (value, decimals) => value == null ? "—" : value.toFixed(decimals);
-
-  for (const entry of panel.rows.filter(row => row.platform === efficiencyPlatform.value)) {
+  const entries = panel.rows.filter(row => row.platform === efficiencyPlatform.value);
+  const registered = efficiencyPlatform.value === "registered-api";
+  document.querySelector("#efficiency-cpu").hidden = registered;
+  document.querySelector("#efficiency-api").hidden = !registered;
+  document.querySelector("#efficiency-api-note").textContent = registered ? entries[0]?.api_timing_label ?? "" : "";
+  for (const entry of entries) {
     const reader = readers.get(entry.reader_id);
-    const execution = executionLabels[entry.execution]?.[entry.status];
-    if (!reader || !execution) continue;
+    if (!reader) continue;
     const tr = document.createElement("tr");
     const readerLabel = entry.execution === "onnx-cpu" ? reader.replace(/ \(CUDA\)$/, "") : reader;
     const heading = cell("th", readerLabel);
     heading.scope = "row";
-    const counts = entry.pages === null ? "—" : `${entry.pages} / ${entry.repetitions}`;
-    const rates = entry.api_input_usd_per_million === null ? "—"
-      : `${measure(entry.api_input_usd_per_million, 2)} / ${measure(entry.api_output_usd_per_million, 2)}`;
-    tr.append(heading, cell("td", execution), cell("td", counts, "metric"));
-    for (const value of [
-      measure(entry.pages_per_minute, 2), measure(entry.peak_rss_mib, 2),
-      measure(entry.marginal_usd_per_1000, 2), measure(entry.runner_hours_per_1000, 3),
-      measure(entry.runner_usd_per_1000, 5), rates,
-    ]) {
-      tr.append(cell("td", value, "metric"));
-    }
+    const [execution, ...values] = efficiencyCells(entry, registered);
+    tr.append(heading, cell("td", execution), ...values.map(value => cell("td", value, "metric")));
     rows.append(tr);
   }
-  document.querySelector("#efficiency-rows").replaceChildren(rows);
+  document.querySelector(registered ? "#efficiency-api-rows" : "#efficiency-rows").replaceChildren(rows);
   if (/^[a-f0-9]{40}$/.test(panel.source_commit)) {
     document.querySelector("#efficiency-source").href =
       `https://github.com/HeOCR/heocr-bench/tree/${panel.source_commit}/efficiency`;

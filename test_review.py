@@ -126,35 +126,49 @@ class DiagnosticTest(unittest.TestCase):
 
 
 class EfficiencyTest(unittest.TestCase):
-    def test_pinned_external_panel_preserves_missing_fields(self):
+    def test_pinned_external_panel_preserves_cpu_and_registered_api_scope(self):
         data = read_results(Path(__file__).with_name("results.json"))
-        pairs = {(row["reader_id"], row["platform"]): row for row in data["efficiency"]["rows"]}
-        self.assertEqual(len(pairs), 12)
+        rows = data["efficiency"]["rows"]
+        pairs = {(row["reader_id"], row["platform"]): row for row in rows}
+        self.assertEqual(len(rows), len(pairs))
+        self.assertEqual(len(pairs), 15)
         self.assertEqual(pairs[("tessdata-fast", "m4-cpu")]["pages_per_minute"], 121.2024)
         self.assertEqual(pairs[("tessdata-fast", "github-ubuntu-cpu")]["pages_per_minute"], 100.5861)
         for platform, repeats in (("m4-cpu", 1), ("github-ubuntu-cpu", 3)):
             with self.subTest(platform=platform):
-                local = [row for row in pairs.values() if row["platform"] == platform
-                         and row["status"] != "list-price-only"]
+                local = [row for row in rows if row["platform"] == platform]
                 self.assertEqual(len(local), 5)
                 self.assertTrue(all(row["pages"] == 65 and row["repetitions"] == repeats for row in local))
                 paddle = pairs[("paddle", platform)]
                 self.assertEqual((paddle["execution"], paddle["status"]), ("onnx-cpu", "measured-cpu-variant"))
-                gemini = pairs[("gemini-vertex-v0", platform)]
-                self.assertEqual((gemini["api_input_usd_per_million"], gemini["api_output_usd_per_million"]), (0.75, 3.75))
-                self.assertIsNone(gemini["pages_per_minute"])
-                self.assertIsNone(gemini["runner_usd_per_1000"])
+        api = {row["reader_id"]: row for row in rows if row["platform"] == "registered-api"}
+        self.assertEqual({key: row["marginal_usd_per_1000"] for key,row in api.items()}, {
+            "gemini-vertex-v0": None, "google-vision-document-text-v0": 1.5,
+            "google-document-ai-ocr-v21-v0": 1.5, "claude-haiku-5-5-v0": 0.458222,
+            "claude-haiku-4-5-v0": 4.629431,
+        })
+        gemini = api["gemini-vertex-v0"]
+        self.assertEqual((gemini["api_input_usd_per_million"], gemini["api_output_usd_per_million"]), (0.75, 3.75))
+        for row in api.values():
+            self.assertIsNone(row["pages_per_minute"])
+            self.assertIsNone(row["api_pages_per_minute"])
+            self.assertIsNone(row["api_mean_request_latency_seconds"])
 
-    def test_duplicate_join_and_price_only_measurement_are_rejected(self):
+    def test_duplicate_join_and_unsourced_api_measurement_are_rejected(self):
         data = read_results(Path(__file__).with_name("results.json"))
-        measurements = data["efficiency"]["rows"]
-        measurements.append(measurements[0].copy())
+        rows = data["efficiency"]["rows"]
+        rows.append(rows[0].copy())
         with self.assertRaisesRegex(ValueError, "repeated efficiency join"):
             validate(data)
-        measurements.pop()
-        quote = next(row for row in measurements if row["status"] == "list-price-only")
-        quote["peak_rss_mib"] = 0
-        with self.assertRaisesRegex(ValueError, "cannot contain measurements"):
+        rows.pop()
+        quote = next(row for row in rows if row["status"] == "list-price-only")
+        quote["api_pages_per_minute"] = 20
+        with self.assertRaisesRegex(ValueError, "requires its recorded scope"):
+            validate(data)
+        quote.update(status="registered-timing-only", api_timing_scope="Fixture network run", api_timed_pages=20)
+        self.assertEqual(validate(data), data)
+        quote["pages_per_minute"] = 20
+        with self.assertRaisesRegex(ValueError, "registered API efficiency scope"):
             validate(data)
 
 
