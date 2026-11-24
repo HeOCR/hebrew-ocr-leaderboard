@@ -14,6 +14,7 @@ from heocr_bench.data import Carrier, load_submission
 from heocr_bench.scoring import score_submission
 
 import review
+from leaderboard_results import ARTWORK_MASK_NOTICE, BIAS_NOTICE, ranked, read_results, validate
 from submissions import score_zip, scorer_identity
 
 
@@ -57,6 +58,36 @@ class ScoreTest(unittest.TestCase):
             scorer.assert_called_once_with(b"data", "API")
         with patch("review.fetch_hf", return_value=b"other"), self.assertRaisesRegex(ValueError, "SHA-256"):
             review.score_packet(pin, expected, None)
+
+
+class DiagnosticTest(unittest.TestCase):
+    def test_api_diagnostics_keep_both_scopes_outside_rankings(self):
+        data = read_results(Path(__file__).with_name("results.json"))
+        diagnostics = {
+            "google-vision-document-text-v0": (10007, 1268),
+            "google-document-ai-ocr-v21-v0": (11297, 1364),
+            "claude-haiku-5-5-v0": (5107, 429),
+        }
+        rows = {row["id"]: row for row in data["rows"]}
+        for key, (paired, masked) in diagnostics.items():
+            with self.subTest(reader=key):
+                row = rows[key]
+                detail = row["diagnostic"]
+                self.assertEqual(row["type"], "commercial API")
+                self.assertEqual(detail["notice"], ARTWORK_MASK_NOTICE)
+                self.assertEqual(row["views"]["filtered"]["pooled"], {"edits": paired, "chars": 61212})
+                self.assertEqual(detail["masked_views"]["filtered"]["pooled"], {"edits": masked, "chars": 9333})
+        baseline = {**data, "rows": [row for row in data["rows"] if row["id"] not in diagnostics]}
+        for view in ("all", "filtered"):
+            self.assertEqual(ranked(data, view), ranked(baseline, view))
+        self.assertEqual(rows["gemini-vertex-v0"]["diagnostic"]["notice"], BIAS_NOTICE)
+
+    def test_new_api_diagnostic_cannot_use_the_bias_notice(self):
+        data = read_results(Path(__file__).with_name("results.json"))
+        vision = next(row for row in data["rows"] if row["id"] == "google-vision-document-text-v0")
+        vision["diagnostic"]["notice"] = BIAS_NOTICE
+        with self.assertRaisesRegex(ValueError, "Invalid diagnostic breakdown"):
+            validate(data)
 
 
 class GitPacketTest(unittest.TestCase):
