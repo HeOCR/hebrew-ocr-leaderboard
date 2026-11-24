@@ -99,6 +99,51 @@ function renderDiagnostics() {
   }
 }
 
+const efficiencyPlatform = document.querySelector("#efficiency-platform");
+const executionLabels = {
+  "native-tesseract": { measured: "Native Tesseract · measured" },
+  "onnx-cpu": { "measured-cpu-variant": "ONNX CPU · measured variant" },
+  "vertex-global-https": { "list-price-only": "Vertex global · list prices only" },
+};
+
+function renderEfficiency() {
+  const panel = data?.efficiency;
+  if (!panel?.rows.length) return;
+  const readers = new Map(data.rows.map(row => [row.id, row.reader]));
+  const rows = document.createDocumentFragment();
+  const measure = (value, decimals) => value == null ? "—" : value.toFixed(decimals);
+
+  for (const entry of panel.rows.filter(row => row.platform === efficiencyPlatform.value)) {
+    const reader = readers.get(entry.reader_id);
+    const execution = executionLabels[entry.execution]?.[entry.status];
+    if (!reader || !execution) continue;
+    const tr = document.createElement("tr");
+    const readerLabel = entry.execution === "onnx-cpu" ? reader.replace(/ \(CUDA\)$/, "") : reader;
+    const heading = cell("th", readerLabel);
+    heading.scope = "row";
+    const counts = entry.pages === null ? "—" : `${entry.pages} / ${entry.repetitions}`;
+    const rates = entry.api_input_usd_per_million === null ? "—"
+      : `${measure(entry.api_input_usd_per_million, 2)} / ${measure(entry.api_output_usd_per_million, 2)}`;
+    tr.append(heading, cell("td", execution), cell("td", counts, "metric"));
+    for (const value of [
+      measure(entry.pages_per_minute, 2), measure(entry.peak_rss_mib, 2),
+      measure(entry.marginal_usd_per_1000, 2), measure(entry.runner_hours_per_1000, 3),
+      measure(entry.runner_usd_per_1000, 5), rates,
+    ]) {
+      tr.append(cell("td", value, "metric"));
+    }
+    rows.append(tr);
+  }
+  document.querySelector("#efficiency-rows").replaceChildren(rows);
+  if (/^[a-f0-9]{40}$/.test(panel.source_commit)) {
+    document.querySelector("#efficiency-source").href =
+      `https://github.com/HeOCR/heocr-bench/tree/${panel.source_commit}/efficiency`;
+  }
+  document.querySelector("#efficiency").hidden = false;
+}
+
+efficiencyPlatform.addEventListener("change", renderEfficiency);
+
 for (const [id, title] of Object.entries(categories)) {
   const button = cell("button", title);
   button.type = "button";
@@ -125,6 +170,7 @@ async function load() {
     data = await response.json();
     if (data.schema !== "heocr.leaderboard.results.v1") throw new Error("Unsupported results");
     render();
+    renderEfficiency();
     scope.textContent = `${data.benchmark.pages} pages · ${data.benchmark.carriers} carriers · ${data.rows.filter(row => !row.diagnostic).length} ranked readers`;
     view.disabled = false;
   } catch {

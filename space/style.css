@@ -41,7 +41,7 @@ thead { background: #edf3fa; }
 td.metric { text-align: end; font-variant-numeric: tabular-nums; white-space: nowrap; }
 td.scorer { min-width: 11rem; overflow-wrap: anywhere; }
 tr:last-child td, tr:last-child th { border-bottom: none; }
-.submit { margin-top: 1rem; }
+.submit, #efficiency { margin-top: 1rem; }
 .submit ol { max-width: 78ch; padding-inline-start: 1.5rem; }
 .submit li + li { margin-top: .35rem; }
 .submit-he { border-top: 1px solid var(--line); margin-top: 1rem; padding-top: 1rem; }
