@@ -82,6 +82,19 @@ class DiagnosticTest(unittest.TestCase):
             self.assertEqual(ranked(data, view), ranked(baseline, view))
         self.assertEqual(rows["gemini-vertex-v0"]["diagnostic"]["notice"], BIAS_NOTICE)
 
+    def test_haiku45_requires_an_output_cap_disclosure(self):
+        data = read_results(Path(__file__).with_name("results.json"))
+        row = next(row for row in data["rows"] if row["id"] == "claude-haiku-4-5-v0")
+        self.assertEqual(
+            row["diagnostic"]["notice"],
+            ARTWORK_MASK_NOTICE + " Haiku 4.5 hit the output cap on 11 carriers.",
+        )
+        for view in ("all", "filtered"):
+            self.assertNotIn(row, ranked(data, view))
+        row["diagnostic"]["notice"] = ARTWORK_MASK_NOTICE
+        with self.assertRaisesRegex(ValueError, "Invalid diagnostic breakdown"):
+            validate(data)
+
     def test_new_api_diagnostic_cannot_use_the_bias_notice(self):
         data = read_results(Path(__file__).with_name("results.json"))
         vision = next(row for row in data["rows"] if row["id"] == "google-vision-document-text-v0")
