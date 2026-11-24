@@ -73,9 +73,7 @@ def benchmark_carriers():
     return carriers
 
 
-def score_zip(raw, reader_type, carriers, load_submission, score_submission, scorer_version):
-    if reader_type not in ("open weights", "API"):
-        raise ValueError("Choose the reader distribution type.")
+def score_zip(raw, receipt, carriers, load_submission, score_submission, scorer_version):
     with TemporaryDirectory(prefix="heocr-predictions-") as temporary:
         folder = Path(temporary)
         unpack_predictions(raw, carriers, folder)
@@ -83,13 +81,13 @@ def score_zip(raw, reader_type, carriers, load_submission, score_submission, sco
         displayed = {key: metadata.get(key) for key in ("reader", "version", "license")}
         if not all(text(displayed[key], size) for key, size in (("reader", 80), ("version", 60), ("license", 80))):
             raise ValueError("Use short public reader, version and licence labels.")
-        if reader_type == "open weights" and metadata["weights"] != "open":
-            raise ValueError("Open weights submissions must declare open weights in metadata.json.")
+        if any(metadata[key] != receipt[key] for key in ("reader", "version", "license", "weights")):
+            raise ValueError("The receipt and ZIP metadata must agree.")
         scored = score_submission(carriers, (metadata, predictions))
     identifier = sha256(raw).hexdigest()
     return {
         "id": identifier, "category": "C1", "reader": displayed["reader"], "version": displayed["version"],
-        "type": reader_type, "licence": displayed["license"], "date": datetime.now(timezone.utc).date().isoformat(),
+        "type": receipt["reader_type"], "licence": displayed["license"], "date": datetime.now(timezone.utc).date().isoformat(),
         "scorer_version": scorer_version, "verified": False, "submission_sha256": identifier,
         "views": {
             view: {
@@ -100,10 +98,10 @@ def score_zip(raw, reader_type, carriers, load_submission, score_submission, sco
     }
 
 
-def score_registered_upload(raw, reader_type):
+def score_registered_upload(raw, receipt):
     from heocr_bench.data import load_submission
     from heocr_bench.scoring import score_submission
 
     expected = os.environ["HEOCR_SCORER_COMMIT"]
     version = scorer_identity(expected)
-    return score_zip(raw, reader_type, benchmark_carriers(), load_submission, score_submission, version)
+    return score_zip(raw, receipt, benchmark_carriers(), load_submission, score_submission, version)

@@ -8,7 +8,7 @@
   <script src="leaderboard.js" defer></script>
 </head>
 <body>
-  <header><a href="https://heocr.org/">HeOCR</a></header>
+  <header><a href="https://heocr.org/">HeOCR</a><a class="submit-link" href="#submit-title">How to submit / <span lang="he" dir="rtl">איך מגישים</span></a></header>
   <main>
     <h1>Hebrew OCR leaderboard</h1>
     <p class="intro">Compare readers on page character error rate. Lower is better.</p>
@@ -34,9 +34,22 @@
       </div>
     </section>
     <section class="submit" aria-labelledby="submit-title">
-      <h2 id="submit-title">Submit via GitHub</h2>
-      <p>Open a pull request with a heocr-bench predictions ZIP or a commit-pinned link to the ZIP on Hugging Face. GitHub Actions scores it. Merged results are marked unverified until HeOCR reruns the reader.</p>
-      <a href="https://github.com/HeOCR/hebrew-ocr-leaderboard/blob/main/SUBMITTING.md">Submission instructions ↗</a>
+      <h2 id="submit-title">How to submit</h2>
+      <ol>
+        <li>Run your reader on <a href="https://huggingface.co/datasets/HeOCR/p-mod-open-v0">P-mod-open v0</a> and package the predictions in a <bdi>heocr-bench</bdi> ZIP.</li>
+        <li>Open a GitHub pull request with the ZIP and a JSON receipt listing the reader, version, licence, open or closed weights, a public link and the ZIP checksum.</li>
+        <li>Read the score comment and request review. One entry per reader and version is accepted. After the lead merges it, the row is self-submitted, unverified until HeOCR reruns it.</li>
+      </ol>
+      <p><a href="https://github.com/HeOCR/hebrew-ocr-leaderboard/blob/main/SUBMITTING.md">Submission instructions and example</a></p>
+      <div lang="he" dir="rtl" class="submit-he">
+        <h2>איך מגישים תוצאות?</h2>
+        <ol>
+          <li>הריצו את מנוע הזיהוי על <a href="https://huggingface.co/datasets/HeOCR/p-mod-open-v0"><bdi>P-mod-open v0</bdi></a> והכינו קובץ <bdi>ZIP</bdi> בפורמט <bdi>heocr-bench</bdi>.</li>
+          <li>פתחו בקשת מיזוג ב־<bdi>GitHub</bdi> עם קובץ התחזיות וקובץ <bdi>JSON</bdi> ובו שם המנוע, גרסה, רישיון, משקולות פתוחות או סגורות, קישור ציבורי וסכום הביקורת של הקובץ.</li>
+          <li>בדקו את תגובת הניקוד ובקשו בדיקה. אפשר להגיש פעם אחת לכל צמד של מנוע וגרסה. לאחר המיזוג, התוצאה תסומן ״הוגש עצמאית, טרם אומת״ עד להרצה חוזרת של <bdi>HeOCR</bdi>.</li>
+        </ol>
+        <p><a href="https://github.com/HeOCR/hebrew-ocr-leaderboard/blob/main/SUBMITTING.md">הוראות הגשה ודוגמה</a></p>
+      </div>
     </section>
   </main>
 </body>

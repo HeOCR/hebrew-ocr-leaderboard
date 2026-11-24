@@ -1,34 +1,57 @@
-# Submit a prediction run
+# How to submit an OCR run
 
 1. Run your reader on the public [P-mod-open v0 benchmark](https://huggingface.co/datasets/HeOCR/p-mod-open-v0).
-   Make a flat ZIP in the [heocr-bench submission format](https://github.com/HeOCR/heocr-bench/tree/39ed8dddd37d9088edb72308c6f4497d6c627e2a).
-   Include `metadata.json` and exactly one UTF-8 text file per carrier.
-   Use public reader/version/licence labels and check the predictions for
-   personal information or credentials before posting.
-2. Make a PR adding `submissions/<id>.json`, with a unique lowercase
-   letters/digits/hyphen ID. Include a matching `submissions/<id>.zip`,
-   or put the ZIP in a public Hugging Face dataset and add an `hf_url`
-   pointing to its exact commit (no branch or temporary signing URL).
-3. Give the ZIP SHA-256 and reader type in the receipt. For example,
+   Create a flat [heocr-bench ZIP](https://github.com/HeOCR/heocr-bench/tree/39ed8dddd37d9088edb72308c6f4497d6c627e2a)
+   with `metadata.json` and one UTF-8 `<carrier-id>.txt` for each of the 65 carriers.
+   Use an empty file for a blank result. ZIP metadata includes `reader`, `version`,
+   `license`, `weights` (`open` or `closed`) and a `params` object.
+2. Open a pull request into `main`, adding just `submissions/<id>.zip` and
+   `submissions/<id>.json`. Use a lowercase ID with letters, digits, and hyphens.
+   The JSON receipt identifies the ZIP and links to the reader's public weights,
+   source, or documentation. For example:
 
    ```json
    {
      "sha256": "<64 lowercase hex characters>",
-     "reader_type": "open weights"
+     "reader": "Example OCR",
+     "version": "1.0.0",
+     "license": "Apache-2.0",
+     "weights": "open",
+     "link": "https://example.org/ocr"
    }
    ```
 
-   Hosted ZIPs also use
-   `"hf_url": "https://huggingface.co/datasets/ORG/REPO/resolve/COMMIT/path/predictions.zip"`.
-   Use `"API"` for a hosted API reader. The ZIP limit is 2 MB compressed,
+   The four reader fields must exactly match the ZIP metadata. For an API, add
+   `"reader_type": "API"`. To host the ZIP in a public Hugging Face dataset
+   instead, add `"hf_url": "https://huggingface.co/datasets/ORG/REPO/resolve/COMMIT/path/predictions.zip"`
+   to the receipt and add only the JSON file. Use an exact commit SHA, and check for private
+   information and secrets before posting. The ZIP limit is 2 MB compressed,
    512 KB expanded, with a maximum of 32 KiB per file.
-4. A maintainer dispatches **Score submission PR** on GitHub Actions
-   using your PR number and exact head SHA. The workflow posts an aggregate
-   score artifact. After the PR merges, the merge workflow scores any new
-   ZIP and syncs the board. Your entry stays unverified until the maintainers
-   independently rerun your reader and review the result.
+3. GitHub Actions comments on a successful score for the current PR head.
+   Check the score and workflow artifact before asking the HeOCR lead to review.
+   The lead decides whether to merge. One submission per reader and version is
+   accepted, ignoring case and spacing. A published row is marked
+   **self-submitted, unverified** until HeOCR independently reruns and reviews it.
 
-For maintainers, require the passing exact-head artifact before merging
-the packet. Review data privacy, public labels and licence declarations in
-the PR. Accept one immutable packet per PR. Once published, the ZIP
-contents and hosted predictions are held to the project’s public data rules.
+The score uses the 65 public v0 carriers, including the nine artwork-masked
+versions, and reports both registered CER views. The v0 reference texts are public.
+
+## Maintainer review
+
+Require the passing score comment or artifact for the **current PR head**.
+Check that the declared reader/version/licence, public reader link and
+prediction text are suitable for public release. Re-score if the head moved
+or a competing submission for the same reader/version merged. To retry an
+eligible PR, dispatch **Score submission PR** from main with its number and
+exact head SHA. Only the lead merges submission PRs. GitHub Actions updates
+the aggregate after merge, preserving the unverified status.
+
+### Publishing mirrors
+
+The existing **Sync merged leaderboard results** workflow reconciles main.
+Set `HEOCR_SITE_BUILDER_COMMIT` to a merged commit of `HeOCR/heocr.github.io`
+with the current builder. The optional mirror steps use
+`HEOCR_ENABLE_LEADERBOARD_SYNC=1` and the
+`HEOCR_LEADERBOARD_SITE_TOKEN` and `HEOCR_LEADERBOARD_HF_TOKEN` repository
+secrets. Sync uses the same results bytes for the HF results dataset, static
+Space and generated site PR. The site PR still needs lead review and merge.
